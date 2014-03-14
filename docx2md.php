@@ -63,7 +63,7 @@ function docx2md($args) {
 
 	if ($res === true) {
 		extractFolder($zip, "word/media", $documentFolder);
-		$zip->extractTo($documentFolder, array("word/document.xml", "word/_rels/document.xml.rels", "docProps/core.xml"));
+		$zip->extractTo($documentFolder, array("word/document.xml", "word/_rels/document.xml.rels", "word/footnotes.xml", "docProps/core.xml"));
 		$zip->close();
 	} else {
 		die("The docx file appears to be corrupt (i.e. it can't be opened using Zip).  Please try re-saving your document and re-uploading, or ensuring that you are providing a valid docx file.\n");
@@ -79,6 +79,12 @@ function docx2md($args) {
 	$wordDocumentRels = new DOMDocument("1.0", "UTF-8");
 	$wordDocumentRels->load($documentFolder . "/word/_rels/document.xml.rels");
 	$wordDocument->documentElement->appendChild($wordDocument->importNode($wordDocumentRels->documentElement, true));
+
+	if (file_exists($documentFolder . "/word/footnotes.xml") == true) {
+		$wordDocumentFns = new DOMDocument("1.0", "UTF-8");
+		$wordDocumentFns->load($documentFolder . "/word/footnotes.xml");
+		$wordDocument->documentElement->appendChild($wordDocument->importNode($wordDocumentFns->documentElement, true));
+	}
 
 	$xml = $wordDocument->saveXML();
 
@@ -281,6 +287,20 @@ define("DOCX_TO_INTERMEDIARY_TRANSFORM", <<<'XML'
 	<xsl:template match="w:br">
 		<i:linebreak />
 	</xsl:template>
+	<xsl:template match="w:footnoteReference">
+		<!-- footnote reference -->
+		<i:footnoteReference><xsl:value-of select="@w:id" /></i:footnoteReference>
+	</xsl:template>
+	<xsl:template match="w:footnote">
+		<!-- footnote -->
+		<xsl:variable name="id" select="@w:id" />
+		<xsl:if test="$id &gt; 0">
+			<i:footnote>
+				<xsl:attribute name="id"><xsl:value-of select="$id" /></xsl:attribute>
+				<xsl:apply-templates />
+			</i:footnote>
+		</xsl:if>
+	</xsl:template>
 
 	<!-- Complete hyperlinks -->
 	<xsl:template match="w:hyperlink">
@@ -316,6 +336,7 @@ define("DOCX_TO_INTERMEDIARY_TRANSFORM", <<<'XML'
 
 	<!-- Edit: Deleted text -->
 	<xsl:template match="w:del" />
+	<xsl:template match="w:instrText" />
 
 </xsl:stylesheet>
 XML
@@ -350,6 +371,10 @@ define("INTERMEDIARY_TO_MARKDOWN_TRANSFORM", <<<'XML'
 	<xsl:template match="i:para"><xsl:if test="./* or text() != ''"><xsl:apply-templates /><xsl:text>&#xa;</xsl:text><xsl:text>&#xa;</xsl:text></xsl:if></xsl:template>
 
 	<xsl:template match="i:linebreak"><xsl:text>&#xa;</xsl:text></xsl:template>
+
+	<xsl:template match="i:footnoteReference"><xsl:text>[^</xsl:text><xsl:apply-templates /><xsl:text>]</xsl:text></xsl:template>
+
+	<xsl:template match="i:footnote"><xsl:text>[^</xsl:text><xsl:value-of select="@id" /><xsl:text>]: </xsl:text><xsl:apply-templates /></xsl:template>
 
 	<!-- Bullet list-item -->
 	<xsl:template match="i:listitem[@type='1']"><xsl:value-of select="substring('&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;&#9;', 1, @level)" /><xsl:text>-&#9;</xsl:text><xsl:apply-templates /><xsl:text>&#xa;</xsl:text><xsl:if test="local-name(following-sibling::i:*[1]) != 'listitem'"><xsl:text>&#xa;</xsl:text></xsl:if></xsl:template>
