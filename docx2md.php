@@ -131,6 +131,20 @@ function docx2md($args) {
 		$xml = str_replace(" </{$tag}>", "</{$tag}>", $xml);
 	}
 
+	$tags = array("i:italic", "i:bold");
+
+	foreach ($tags as $tag) {
+		// Remove any redundant tags
+		$xml = str_replace("</{$tag}><{$tag}>", "", $xml);
+
+		// Move a single space to outside tag
+		$xml = str_replace("<{$tag}> ", " <{$tag}>", $xml);
+		$xml = str_replace(" </{$tag}>", "</{$tag}> ", $xml);
+
+		// Remove any redundant tags
+		$xml = str_replace("<{$tag}></{$tag}>", "", $xml);
+	}
+
 	$intermediaryDocument->loadXML($xml);
 
 	if ($debugDumpIntermediary) {
