@@ -254,6 +254,20 @@ define("DOCX_TO_INTERMEDIARY_TRANSFORM", <<<'XML'
 		</xsl:if>
 	</xsl:template>
 
+	<!-- Block quote -->	
+	<xsl:template match="w:p[ w:pPr/w:pStyle/@w:val[ contains( ., 'Quote' ) ] ]">
+		<i:quote><xsl:apply-templates /></i:quote>
+	</xsl:template>
+	<xsl:template match="w:p[ w:pPr/w:pStyle/@w:val[ contains( ., 'quote' ) ] ]">
+		<i:quote><xsl:apply-templates /></i:quote>
+	</xsl:template>
+	<xsl:template match="w:p[ w:pPr/w:pStyle/@w:val[ contains( ., 'Quotation' ) ] ]">
+		<i:quote><xsl:apply-templates /></i:quote>
+	</xsl:template>
+	<xsl:template match="w:p[ w:pPr/w:pStyle/@w:val[ contains( ., 'quotation' ) ] ]">
+		<i:quote><xsl:apply-templates /></i:quote>
+	</xsl:template>
+
 	<!-- Regular paragraph style -->
 	<xsl:template match="w:p">
 		<xsl:if test="count(w:r)">
@@ -375,6 +389,8 @@ define("INTERMEDIARY_TO_MARKDOWN_TRANSFORM", <<<'XML'
 	<xsl:template match="i:body"><xsl:apply-templates /></xsl:template>
 
 	<xsl:template match="i:heading"><xsl:value-of select="substring('######', 1, @level)" /><xsl:text>&#32;</xsl:text><xsl:apply-templates /><xsl:text>&#xa;</xsl:text><xsl:text>&#xa;</xsl:text></xsl:template>
+
+	<xsl:template match="i:quote"><xsl:text>&gt; </xsl:text><xsl:apply-templates /><xsl:text>&#xa;</xsl:text></xsl:template>
 
 	<xsl:template match="i:link"><xsl:text>[</xsl:text><xsl:value-of select="." /><xsl:text>][</xsl:text><xsl:value-of select="count(preceding::i:link) + 1" /><xsl:text>]</xsl:text></xsl:template>
 
